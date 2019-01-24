@@ -1,3 +1,4 @@
+const _ = require('lodash')
 const express = require('express')
 const bodyParser = require('body-parser')
 const { ObjectId } = require('mongodb')
@@ -67,10 +68,42 @@ app.delete('/todos/:id', (req, res) => {
         return res.status(400).send()
       }
 
-      return res.send(todo)
+      return res.send({ todo })
     })
     .catch(err => res.status(404).send(err))
 })
+
+app.patch('/todos/:id', (req, res) => {
+  let id = req.params.id
+  let body = _.pick(req.body, ['text', 'completed'])
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(404).send()
+  }
+
+  if (_.isBoolean(body.completed) && body.completed) {
+    body.completedAt = new Date().getTime()
+  } else {
+    body.completed = false
+    body.completedAt = null
+  }
+
+  Todo.findByIdAndUpdate(id, { $set: body }, { new: true })
+    .then(todo => {
+      if (!todo) {
+        return res.status(404).send()
+      }
+
+      res.send(todo)
+    })
+    .catch(err => {
+      res.status(400).send(err)
+    })
+})
+
+/// /////////////////////////
+//    Connection part     //
+/// /////////////////////////
 
 app.listen(port, () => {
   console.log(`Connected to port: ${port}`)
